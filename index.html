@@ -1,0 +1,1353 @@
+<html lang="it"><head>
+<meta charset="UTF-8">
+<title>Consorzio GITAV — Organigramma</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#edeae3;overflow:hidden;height:100vh;user-select:none;}
+
+/* TOOLBAR */
+.tb{position:fixed;top:0;left:0;right:0;height:46px;background:#1a1a18;display:flex;align-items:center;gap:6px;padding:0 12px;z-index:1000;}
+.tb-logo{font-size:13px;font-weight:700;color:#fff;margin-right:8px;white-space:nowrap;}
+.tb-logo span{color:#1D9E75;}
+.tb-sep{width:1px;height:22px;background:#333;margin:0 2px;}
+.btn{padding:5px 11px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:opacity .15s;white-space:nowrap;}
+.btn:hover{opacity:.82;}
+.btn-green{background:#1D9E75;color:#fff;}
+.btn-gray{background:#2e2e2c;color:#aaa;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-blue{background:#185FA5;color:#fff;}
+.btn-red{background:#7a1f1f;color:#fff;}
+.tb-saved{font-size:10px;color:#3a7a5a;margin-left:4px;transition:opacity .5s;}
+.tb-zoom{font-size:11px;color:#555;margin-left:auto;white-space:nowrap;}
+
+/* CANVAS */
+#cvs{position:fixed;top:46px;left:0;right:0;bottom:0;overflow:hidden;cursor:grab;}
+#cvs.grabbing{cursor:grabbing;}
+#world{position:absolute;transform-origin:0 0;width:5000px;height:4000px;}
+#svg-l{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+
+/* NODE */
+.node{position:absolute;width:152px;cursor:grab;padding-top:30px;}
+.node.dragging{cursor:grabbing;z-index:500;filter:drop-shadow(0 8px 24px rgba(0,0,0,.3));}
+.ni{border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.07);}
+.ni:hover{box-shadow:0 4px 14px rgba(0,0,0,.14);}
+.nbar{height:6px;}
+.nbody{padding:7px 8px 8px;}
+.ntitle{font-size:8.5px;font-weight:700;color:#1a1a18;line-height:1.35;margin-bottom:4px;min-height:20px;}
+.nname{font-size:8px;color:#888;min-height:12px;border-top:1px solid #f0ede6;padding-top:3px;margin-top:3px;font-style:italic;}
+
+/* ACTION BUTTONS — shown on hover, inside the padding-top zone so hover never breaks */
+.nacts{position:absolute;top:2px;left:0;right:0;display:none;justify-content:center;gap:4px;z-index:200;}
+.node:hover .nacts{display:flex;}
+.na{width:22px;height:22px;border-radius:5px;border:none;cursor:pointer;font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .1s;}
+.na:hover{transform:scale(1.15);}
+.na-edit{background:#1a1a18;color:#fff;}
+.na-add{background:#1D9E75;color:#fff;}
+.na-col{background:#534AB7;color:#fff;font-size:9px;}
+.na-del{background:#c0392b;color:#fff;font-size:13px;line-height:1;}
+.na-link{background:#BA7517;color:#fff;font-size:12px;}
+
+/* CONNECT MODE */
+.btn-connect{background:#BA7517;color:#fff;}
+.btn-connect.active{background:#fff;color:#BA7517;box-shadow:0 0 0 2px #BA7517;}
+#cvs.connect-mode{cursor:crosshair;}
+.node.connect-source .ni{outline:3px solid #BA7517;outline-offset:2px;}
+.node.connect-target-hover .ni{outline:2px dashed #1D9E75;outline-offset:2px;}
+.connect-banner{position:fixed;top:46px;left:0;right:0;background:#BA7517;color:#fff;
+  text-align:center;font-size:12px;font-weight:600;padding:7px;z-index:999;
+  display:none;letter-spacing:.02em;}
+.connect-banner.active{display:block;}
+.connect-banner span{font-weight:400;opacity:.85;margin-left:8px;}
+
+/* DISCONNECT btn in modal */
+.mbtn-disc{background:#f0ede6;color:#BA7517;}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;display:flex;align-items:center;justify-content:center;}
+.modal{background:#fff;border-radius:12px;padding:22px 24px;width:300px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.modal h3{font-size:13px;font-weight:700;color:#1a1a18;margin-bottom:16px;}
+.modal label{font-size:10px;color:#888;display:block;margin-bottom:4px;margin-top:10px;}
+.modal label:first-of-type{margin-top:0;}
+.modal input,.modal select{width:100%;border:1px solid #d5d2ca;border-radius:7px;padding:8px 10px;
+  font-size:12px;font-family:inherit;outline:none;color:#1a1a18;background:#fff;}
+.modal input:focus,.modal select:focus{border-color:#1D9E75;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.mbtn{padding:8px 18px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;}
+.mbtn-save{background:#1D9E75;color:#fff;}
+.mbtn-del{background:#c0392b;color:#fff;}
+.mbtn-cancel{background:#f0ede6;color:#555;}
+.modal-warn{font-size:12px;color:#555;line-height:1.6;margin-bottom:4px;}
+.modal-warn strong{color:#c0392b;}
+
+/* COLOR SWATCHES */
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.swatch{width:26px;height:26px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:transform .1s;}
+.swatch:hover,.swatch.active{border-color:#1a1a18;transform:scale(1.15);}
+
+/* LEGEND */
+.legend{position:fixed;bottom:12px;left:12px;background:rgba(255,255,255,.93);border-radius:10px;
+  padding:9px 12px;z-index:900;box-shadow:0 2px 10px rgba(0,0,0,.1);}
+.leg-t{font-size:8.5px;font-weight:700;color:#999;letter-spacing:.05em;margin-bottom:5px;}
+.leg-i{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.leg-l{font-size:9px;color:#555;}
+
+/* HINT */
+.hint{position:fixed;bottom:12px;right:12px;background:rgba(255,255,255,.93);border-radius:10px;
+  padding:9px 12px;z-index:900;box-shadow:0 2px 10px rgba(0,0,0,.1);font-size:9px;color:#888;line-height:1.9;}
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div class="tb">
+  <div class="tb-logo">Consorzio <span>GITAV</span></div>
+  <div class="tb-sep"></div>
+  <button class="btn btn-green" onclick="addRoot()">+ Nodo libero</button>
+  <button class="btn btn-gray" id="btn-undo" onclick="undo()" title="Annulla ultima azione (⌘Z)">↩ Annulla</button>
+  <button class="btn btn-connect" id="btn-connect" onclick="toggleConnectMode()">🔗 Connetti</button>
+  <button class="btn btn-gray" onclick="fitAll()">⊞ Adatta</button>
+  <button class="btn btn-gray" onclick="resetZoom()">100%</button>
+  <button class="btn btn-red" onclick="confirmResetAll()">↺ Reset</button>
+  <button class="btn btn-blue" onclick="saveAsFile()" title="Scarica il file con i dati salvati dentro">💾 Salva file</button>
+  <span class="tb-saved" id="saved-lbl" style="opacity: 0;">✓ Salvato</span>
+  <span class="tb-zoom" id="zoom-lbl">109%</span>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="overlay" id="ov-edit" style="display: none;">
+  <div class="modal">
+    <h3>✎ Modifica posizione</h3>
+    <label>Ruolo / Titolo</label>
+    <input id="ei-title" type="text" placeholder="es. Marketing Manager">
+    <label>Nome persona</label>
+    <input id="ei-name" type="text" placeholder="es. Mario Rossi">
+    <label>Colore</label>
+    <div class="swatches" id="ei-swatches"><div class="swatch" title="Direzione" style="background: rgb(29, 158, 117);"></div><div class="swatch" title="Amministrazione" style="background: rgb(186, 117, 23);"></div><div class="swatch" title="HR" style="background: rgb(156, 48, 96);"></div><div class="swatch active" title="Marketing" style="background: rgb(24, 95, 165);"></div><div class="swatch" title="Sales" style="background: rgb(59, 112, 17);"></div><div class="swatch" title="Digitale" style="background: rgb(83, 74, 183);"></div><div class="swatch" title="Call Center" style="background: rgb(163, 45, 45);"></div><div class="swatch" title="IT" style="background: rgb(102, 102, 102);"></div><div class="swatch" title="Altro" style="background: rgb(44, 82, 130);"></div><div class="swatch" title="Generico" style="background: rgb(26, 26, 24);"></div></div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-disc" id="btn-disc" onclick="disconnectNode()" style="margin-right: auto; display: block;">✂ Disconnetti</button>
+      <button class="mbtn mbtn-cancel" onclick="closeModal('ov-edit')">Annulla</button>
+      <button class="mbtn mbtn-save" onclick="saveEdit()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="ov-del" style="display: none;">
+  <div class="modal">
+    <h3>Eliminare questo nodo?</h3>
+    <p class="modal-warn">Verranno eliminati anche tutti i <strong>nodi figli</strong> collegati.</p>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeModal('ov-del')">Annulla</button>
+      <button class="mbtn mbtn-del" onclick="confirmDelete()">Elimina</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET CONFIRM -->
+<div class="overlay" id="ov-reset" style="display:none">
+  <div class="modal">
+    <h3>Reset organigramma?</h3>
+    <p class="modal-warn">Tutti i dati inseriti verranno <strong>eliminati</strong> e l'organigramma tornerà alla struttura di default.</p>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeModal('ov-reset')">Annulla</button>
+      <button class="mbtn mbtn-del" onclick="doReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONNECT BANNER -->
+<div class="connect-banner" id="connect-banner">
+  🔗 Modalità connessione — <span id="connect-step">Ora clicca il nodo di DESTINAZIONE (figlio)</span>
+  <button class="mbtn mbtn-cancel" style="margin-left:16px;padding:3px 10px;font-size:11px;" onclick="exitConnectMode()">✕ Esci</button>
+</div>
+
+<!-- CANVAS -->
+<div id="cvs" class="">
+  <div id="world" style="transform: translate(233.561px, -205.82px) scale(1.08867);">
+    <svg id="svg-l"><path d="M836,126 C836,174.39017689603835 336.7229964849853,174.39017689603835 336.7229964849853,222.7803537920767" stroke="#BA7517" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M836,126 C836,174.00693606823972 157.70276759184992,174.00693606823972 157.70276759184992,222.01387213647945" stroke="#9C3060" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M836,126 C836,173 496,173 496,220" stroke="#185FA5" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M836,126 C836,174.45416028166187 809.7827459128912,174.45416028166187 809.7827459128912,222.9083205633237" stroke="#3B7011" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M836,126 C836,231.00609578954322 1068.6041343465943,231.00609578954322 1068.6041343465943,336.01219157908645" stroke="#A32D2D" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M836,126 C836,230.35660126934863 1228.5785715644572,230.35660126934863 1228.5785715644572,334.71320253869726" stroke="#666" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M336.7229964849853,308.7803537920767 C336.7229964849853,386.4603632456188 469.0735183099756,386.4603632456188 469.0735183099756,464.1403726991609" stroke="#BA7517" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M336.7229964849853,308.7803537920767 C336.7229964849853,388.7924143441038 123.8382916530467,388.7924143441038 123.8382916530467,468.80447489613084" stroke="#BA7517" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M336.7229964849853,308.7803537920767 C336.7229964849853,387.0980334678608 294.0045769105046,387.0980334678608 294.0045769105046,465.4157131436449" stroke="#BA7517" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M157.70276759184992,308.01387213647945 C157.70276759184992,318.40755952945256 -100.29880131017603,318.40755952945256 -100.29880131017603,328.8012469224256" stroke="#9C3060" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M157.70276759184992,308.01387213647945 C157.70276759184992,322.64779062478505 64.05084282063447,322.64779062478505 64.05084282063447,337.28170911309064" stroke="#9C3060" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M496,306 C496,352.66294056533167 620.5518796204349,352.66294056533167 620.5518796204349,399.32588113066333" stroke="#185FA5" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M496,306 C496,348.78517981423335 454.81997652817836,348.78517981423335 454.81997652817836,391.5703596284667" stroke="#185FA5" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M809.7827459128912,308.90832056332374 C809.7827459128912,321.6408545565453 736.0423690171955,321.6408545565453 736.0423690171955,334.3733885497669" stroke="#3B7011" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1068.6041343465943,422.01219157908645 C1068.6041343465943,516.8773769539561 958.6653423711455,516.8773769539561 958.6653423711455,611.7425623288257" stroke="#A32D2D" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1068.6041343465943,422.01219157908645 C1068.6041343465943,561.075170091361 824.4866483967048,561.075170091361 824.4866483967048,700.1381486036355" stroke="#A32D2D" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1068.6041343465943,422.01219157908645 C1068.6041343465943,516.4903556114649 1135.863419456077,516.4903556114649 1135.863419456077,610.9685196438434" stroke="#A32D2D" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1068.6041343465943,422.01219157908645 C1068.6041343465943,556.1711558356194 992.8112122528315,556.1711558356194 992.8112122528315,690.3301200921524" stroke="#A32D2D" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1228.5785715644572,420.71320253869726 C1228.5785715644572,446.7942555587398 1234.1506533030856,446.7942555587398 1234.1506533030856,472.87530857878227" stroke="#666" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1228.5785715644572,420.71320253869726 C1228.5785715644572,517.0567949673632 1368.9548638325302,517.0567949673632 1368.9548638325302,613.400387396029" stroke="#666" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M336.7229964849853,308.7803537920767 C336.7229964849853,185.1210674234079 338.0309347641321,185.1210674234079 338.0309347641321,61.46178105473909" stroke="#BA7517" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M336.7229964849853,308.7803537920767 C336.7229964849853,388.9139590069895 -48.62351750241635,388.9139590069895 -48.62351750241635,469.0475642219023" stroke="#BA7517" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M809.7827459128912,308.90832056332374 C809.7827459128912,323.47393585139497 898.6629481009227,323.47393585139497 898.6629481009227,338.0395511394662" stroke="#3B7011" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1068.6041343465943,422.01219157908645 C1068.6041343465943,554.4896369991116 1168.8602656748874,554.4896369991116 1168.8602656748874,686.9670824191368" stroke="#A32D2D" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M809.7827459128912,308.90832056332374 C809.7827459128912,371.4522587272405 815.3215596724995,371.4522587272405 815.3215596724995,433.9961968911573" stroke="#3B7011" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M836,126 C836,232.57055446907745 1389.8816051230144,232.57055446907745 1389.8816051230144,339.1411089381549" stroke="#534AB7" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M1389.8816051230144,425.1411089381549 C1389.8816051230144,432.60668718044235 1409.9556267112564,432.60668718044235 1409.9556267112564,440.07226542272974" stroke="#534AB7" stroke-width="1.6" fill="none" opacity="0.55"></path><path d="M496,306 C496,396.1719962086002 643.3120151655992,396.1719962086002 643.3120151655992,486.3439924172004" stroke="#185FA5" stroke-width="1.6" fill="none" opacity="0.55"></path></svg>
+  <div class="node" id="n1" data-id="1" style="left: 760px; top: 40px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,1)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,1)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,1)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,1)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,1)">
+        <div class="nbar" style="background:#1D9E75"></div>
+        <div class="nbody" style="background:#e8f8f2">
+          <div class="ntitle">Direttore Generale / CEO</div>
+          <div class="nname">Benjamin Francorsi</div>
+        </div>
+      </div></div><div class="node" id="n2" data-id="2" style="left: 260.723px; top: 222.78px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,2)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,2)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,2)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,2)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,2)">
+        <div class="nbar" style="background:#BA7517"></div>
+        <div class="nbody" style="background:#faecd6">
+          <div class="ntitle">Resp. Amministrazione &amp; Finance</div>
+          <div class="nname">Matteo Bernachini</div>
+        </div>
+      </div></div><div class="node" id="n3" data-id="3" style="left: 81.7028px; top: 222.014px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,3)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,3)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,3)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,3)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,3)">
+        <div class="nbar" style="background:#9C3060"></div>
+        <div class="nbody" style="background:#f7e0ec">
+          <div class="ntitle">Resp. HR &amp; Personale</div>
+          <div class="nname">Massimo Zugaro</div>
+        </div>
+      </div></div><div class="node" id="n4" data-id="4" style="left: 420px; top: 220px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,4)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,4)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,4)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,4)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,4)">
+        <div class="nbar" style="background:#185FA5"></div>
+        <div class="nbody" style="background:#deeaf8">
+          <div class="ntitle">Resp. Digitale Web e Marketing</div>
+          <div class="nname">Fabiana Mascioni</div>
+        </div>
+      </div></div><div class="node" id="n5" data-id="5" style="left: 733.783px; top: 222.908px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,5)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,5)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,5)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,5)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,5)">
+        <div class="nbar" style="background:#3B7011"></div>
+        <div class="nbody" style="background:#e5f2d8">
+          <div class="ntitle">Resp. Sales &amp; Commerciale</div>
+          <div class="nname">Emanuele Mansueti</div>
+        </div>
+      </div></div><div class="node" id="n7" data-id="7" style="left: 992.604px; top: 336.012px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,7)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,7)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,7)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,7)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,7)">
+        <div class="nbar" style="background:#A32D2D"></div>
+        <div class="nbody" style="background:#fbe8e8">
+          <div class="ntitle">Resp. Call Center &amp; Prenotazioni</div>
+          <div class="nname">Andrea Giorgini</div>
+        </div>
+      </div></div><div class="node" id="n8" data-id="8" style="left: 1152.58px; top: 334.713px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,8)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,8)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,8)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,8)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,8)">
+        <div class="nbar" style="background:#666"></div>
+        <div class="nbody" style="background:#f0f0f0">
+          <div class="ntitle">Resp. IT &amp; Sistemi</div>
+          <div class="nname">Andrea Giorgini</div>
+        </div>
+      </div></div><div class="node" id="n9" data-id="9" style="left: 393.074px; top: 464.14px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,9)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,9)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,9)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,9)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,9)">
+        <div class="nbar" style="background:#BA7517"></div>
+        <div class="nbody" style="background:#faecd6">
+          <div class="ntitle">Contabile 1</div>
+          <div class="nname">Bruno Rispoli</div>
+        </div>
+      </div></div><div class="node" id="n10" data-id="10" style="left: 47.8383px; top: 468.804px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,10)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,10)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,10)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,10)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,10)">
+        <div class="nbar" style="background:#BA7517"></div>
+        <div class="nbody" style="background:#faecd6">
+          <div class="ntitle">Contabile 2</div>
+          <div class="nname">Marina Panagia</div>
+        </div>
+      </div></div><div class="node" id="n11" data-id="11" style="left: 218.005px; top: 465.416px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,11)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,11)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,11)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,11)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,11)">
+        <div class="nbar" style="background:#BA7517"></div>
+        <div class="nbody" style="background:#faecd6">
+          <div class="ntitle">Contabile / Data Analyst</div>
+          <div class="nname">Giulio Giannelli</div>
+        </div>
+      </div></div><div class="node" id="n12" data-id="12" style="left: -176.299px; top: 328.801px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,12)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,12)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,12)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,12)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,12)">
+        <div class="nbar" style="background:#9C3060"></div>
+        <div class="nbody" style="background:#f7e0ec">
+          <div class="ntitle">Addetto HR Technico</div>
+          <div class="nname">Studio Zugaro - Studio Prisciandaro</div>
+        </div>
+      </div></div><div class="node" id="n13" data-id="13" style="left: -11.9492px; top: 337.282px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,13)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,13)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,13)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,13)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,13)">
+        <div class="nbar" style="background:#9C3060"></div>
+        <div class="nbody" style="background:#f7e0ec">
+          <div class="ntitle">Addetto HR employee welness</div>
+          <div class="nname">CHO esterno?</div>
+        </div>
+      </div></div><div class="node" id="n14" data-id="14" style="left: 544.552px; top: 399.326px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,14)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,14)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,14)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,14)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,14)">
+        <div class="nbar" style="background:#185FA5"></div>
+        <div class="nbody" style="background:#deeaf8">
+          <div class="ntitle">Content, Siti e Piattaforme</div>
+          <div class="nname">Consuelo</div>
+        </div>
+      </div></div><div class="node" id="n15" data-id="15" style="left: 378.82px; top: 391.57px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,15)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,15)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,15)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,15)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,15)">
+        <div class="nbar" style="background:#185FA5"></div>
+        <div class="nbody" style="background:#deeaf8">
+          <div class="ntitle">Grafico / Content / Social / Visual</div>
+          <div class="nname">Valeria</div>
+        </div>
+      </div></div><div class="node" id="n17" data-id="17" style="left: 660.042px; top: 334.373px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,17)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,17)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,17)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,17)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,17)">
+        <div class="nbar" style="background:#3B7011"></div>
+        <div class="nbody" style="background:#e5f2d8">
+          <div class="ntitle">Sales Manager/ Gruppi</div>
+          <div class="nname">Arianna?</div>
+        </div>
+      </div></div><div class="node" id="n22" data-id="22" style="left: 882.665px; top: 611.743px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,22)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,22)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,22)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,22)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,22)">
+        <div class="nbar" style="background:#A32D2D"></div>
+        <div class="nbody" style="background:#fbe8e8">
+          <div class="ntitle">Call Center Senior</div>
+          <div class="nname">Chiara Moretti</div>
+        </div>
+      </div></div><div class="node" id="n23" data-id="23" style="left: 748.487px; top: 700.138px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,23)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,23)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,23)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,23)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,23)">
+        <div class="nbar" style="background:#A32D2D"></div>
+        <div class="nbody" style="background:#fbe8e8">
+          <div class="ntitle">Operatore 1</div>
+          <div class="nname">Mirk berardi</div>
+        </div>
+      </div></div><div class="node" id="n24" data-id="24" style="left: 1059.86px; top: 610.969px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,24)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,24)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,24)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,24)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,24)">
+        <div class="nbar" style="background:#A32D2D"></div>
+        <div class="nbody" style="background:#fbe8e8">
+          <div class="ntitle">Call Center Senior</div>
+          <div class="nname">Giada Tafani</div>
+        </div>
+      </div></div><div class="node" id="n25" data-id="25" style="left: 916.811px; top: 690.33px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,25)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,25)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,25)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,25)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,25)">
+        <div class="nbar" style="background:#A32D2D"></div>
+        <div class="nbody" style="background:#fbe8e8">
+          <div class="ntitle">Operatore 3</div>
+          <div class="nname">Carolina Staron</div>
+        </div>
+      </div></div><div class="node" id="n26" data-id="26" style="left: 1158.15px; top: 472.875px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,26)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,26)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,26)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,26)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,26)">
+        <div class="nbar" style="background:#666"></div>
+        <div class="nbody" style="background:#f0f0f0">
+          <div class="ntitle">IT Manager / PMS</div>
+          <div class="nname">Giorgini e Masha</div>
+        </div>
+      </div></div><div class="node" id="n27" data-id="27" style="left: 1292.95px; top: 613.4px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,27)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,27)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,27)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,27)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,27)">
+        <div class="nbar" style="background:#666"></div>
+        <div class="nbody" style="background:#f0f0f0">
+          <div class="ntitle">Assistenza Tecnica</div>
+          <div class="nname">Fans Computer/ Toscana TLC/ Carlo Lauci (Video sorveglianza)</div>
+        </div>
+      </div></div><div class="node" id="n100" data-id="100" style="left: 262.031px; top: 61.4618px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,100)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,100)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,100)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,100)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,100)">
+        <div class="nbar" style="background:#BA7517"></div>
+        <div class="nbody" style="background:#faecd6">
+          <div class="ntitle">Delegata alla gestione Admin/Finance</div>
+          <div class="nname">Anna Digiuseppe</div>
+        </div>
+      </div></div><div class="node" id="n101" data-id="101" style="left: -124.624px; top: 469.048px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,101)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,101)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,101)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,101)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,101)">
+        <div class="nbar" style="background:#BA7517"></div>
+        <div class="nbody" style="background:#faecd6">
+          <div class="ntitle">Contabile/ CAPEX</div>
+          <div class="nname">Marlena Gergis</div>
+        </div>
+      </div></div><div class="node" id="n102" data-id="102" style="left: 822.663px; top: 338.04px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,102)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,102)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,102)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,102)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,102)">
+        <div class="nbar" style="background:#3B7011"></div>
+        <div class="nbody" style="background:#e5f2d8">
+          <div class="ntitle">Pricing and Analytics</div>
+          <div class="nname">Masha Isutina</div>
+        </div>
+      </div></div><div class="node" id="n103" data-id="103" style="left: 1092.86px; top: 686.967px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,103)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,103)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,103)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,103)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,103)">
+        <div class="nbar" style="background:#A32D2D"></div>
+        <div class="nbody" style="background:#fbe8e8">
+          <div class="ntitle">Operatore 2</div>
+          <div class="nname">Anna Nuzzuolo</div>
+        </div>
+      </div></div><div class="node" id="n104" data-id="104" style="left: 739.322px; top: 433.996px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,104)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,104)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,104)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,104)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,104)">
+        <div class="nbar" style="background:#3B7011"></div>
+        <div class="nbody" style="background:#e5f2d8">
+          <div class="ntitle">Consulente Sales Esterno?</div>
+          <div class="nname">Sberenini?</div>
+        </div>
+      </div></div><div class="node" id="n105" data-id="105" style="left: 1313.88px; top: 339.141px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,105)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,105)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,105)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,105)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,105)">
+        <div class="nbar" style="background:#534AB7"></div>
+        <div class="nbody" style="background:#eae8fc">
+          <div class="ntitle">Controllo Qualità</div>
+          <div class="nname">Arianna D'auria?</div>
+        </div>
+      </div></div><div class="node" id="n106" data-id="106" style="left: 1333.96px; top: 440.072px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,106)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,106)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,106)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,106)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,106)">
+        <div class="nbar" style="background:#534AB7"></div>
+        <div class="nbody" style="background:#eae8fc">
+          <div class="ntitle">Governanti struttura</div>
+          <div class="nname"><span style="color:#ccc">—</span></div>
+        </div>
+      </div></div><div class="node" id="n107" data-id="107" style="left: 567.312px; top: 486.344px;">
+      <div class="nacts">
+        <button class="na na-edit" onclick="openEdit(event,107)" title="Modifica">✎</button>
+        <button class="na na-add" onclick="addChild(event,107)" title="Aggiungi figlio">+</button>
+        <button class="na na-link" onclick="startConnect(event,107)" title="Connetti a...">🔗</button>
+        <button class="na na-del" onclick="openDel(event,107)" title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,107)">
+        <div class="nbar" style="background:#185FA5"></div>
+        <div class="nbody" style="background:#deeaf8">
+          <div class="ntitle">Content Creation foto e video</div>
+          <div class="nname">Angela</div>
+        </div>
+      </div></div></div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="leg-t">DIPARTIMENTI</div>
+  <div id="leg-body"><div class="leg-i">
+      <div class="leg-dot" style="background:#1D9E75"></div>
+      <span class="leg-l">Direzione</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#BA7517"></div>
+      <span class="leg-l">Amministrazione</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#9C3060"></div>
+      <span class="leg-l">HR</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#185FA5"></div>
+      <span class="leg-l">Marketing</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#3B7011"></div>
+      <span class="leg-l">Sales</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#534AB7"></div>
+      <span class="leg-l">Digitale</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#A32D2D"></div>
+      <span class="leg-l">Call Center</span>
+    </div><div class="leg-i">
+      <div class="leg-dot" style="background:#666"></div>
+      <span class="leg-l">IT</span>
+    </div></div>
+</div>
+
+<!-- HINT -->
+<div class="hint">
+  <b>💾 Salva file</b> → scarica HTML con dati incorporati<br>
+  <b>Passa sopra</b> un nodo per le azioni<br>
+  <b>✎</b> modifica · <b>+</b> figlio · <b>🔗</b> connetti · <b>×</b> elimina<br>
+  <b>🔗 Connetti</b> → click sorgente → click destinazione<br>
+  <b>✂ Disconnetti</b> in ✎ per rimuovere un collegamento
+</div>
+
+<script>
+// ── COLOURS ──────────────────────────────────────────────────────────────────
+const COLS = {
+  teal:   {bar:'#1D9E75', bg:'#e8f8f2', label:'Direzione'},
+  amber:  {bar:'#BA7517', bg:'#faecd6', label:'Amministrazione'},
+  rose:   {bar:'#9C3060', bg:'#f7e0ec', label:'HR'},
+  blue:   {bar:'#185FA5', bg:'#deeaf8', label:'Marketing'},
+  green:  {bar:'#3B7011', bg:'#e5f2d8', label:'Sales'},
+  purp:   {bar:'#534AB7', bg:'#eae8fc', label:'Digitale'},
+  red:    {bar:'#A32D2D', bg:'#fbe8e8', label:'Call Center'},
+  gray:   {bar:'#666',    bg:'#f0f0f0', label:'IT'},
+  indigo: {bar:'#2c5282', bg:'#e6f0ff', label:'Altro'},
+  dark:   {bar:'#1a1a18', bg:'#f5f4f0', label:'Generico'},
+};
+
+// ── DEFAULT DATA ──────────────────────────────────────────────────────────────
+/*GITAV_DATA_START*/
+const DEFAULT = [
+  {
+    "id": 1,
+    "p": null,
+    "t": "Direttore Generale / CEO",
+    "n": "Benjamin Francorsi",
+    "c": "teal",
+    "x": 760,
+    "y": 40
+  },
+  {
+    "id": 2,
+    "p": 1,
+    "t": "Resp. Amministrazione & Finance",
+    "n": "Matteo Bernachini",
+    "c": "amber",
+    "x": 260.7229964849853,
+    "y": 222.7803537920767
+  },
+  {
+    "id": 3,
+    "p": 1,
+    "t": "Resp. HR & Personale",
+    "n": "Massimo Zugaro",
+    "c": "rose",
+    "x": 81.7027675918499,
+    "y": 222.01387213647945
+  },
+  {
+    "id": 4,
+    "p": 1,
+    "t": "Resp. Digitale Web e Marketing",
+    "n": "Fabiana Mascioni",
+    "c": "blue",
+    "x": 420,
+    "y": 220
+  },
+  {
+    "id": 5,
+    "p": 1,
+    "t": "Resp. Sales & Commerciale",
+    "n": "Emanuele Mansueti",
+    "c": "green",
+    "x": 733.7827459128912,
+    "y": 222.9083205633237
+  },
+  {
+    "id": 7,
+    "p": 1,
+    "t": "Resp. Call Center & Prenotazioni",
+    "n": "Andrea Giorgini",
+    "c": "red",
+    "x": 992.6041343465943,
+    "y": 336.01219157908645
+  },
+  {
+    "id": 8,
+    "p": 1,
+    "t": "Resp. IT & Sistemi",
+    "n": "Andrea Giorgini",
+    "c": "gray",
+    "x": 1152.5785715644572,
+    "y": 334.71320253869726
+  },
+  {
+    "id": 9,
+    "p": 2,
+    "t": "Contabile 1",
+    "n": "Bruno Rispoli",
+    "c": "amber",
+    "x": 393.0735183099756,
+    "y": 464.1403726991609
+  },
+  {
+    "id": 10,
+    "p": 2,
+    "t": "Contabile 2",
+    "n": "Marina Panagia",
+    "c": "amber",
+    "x": 47.838291653046696,
+    "y": 468.80447489613084
+  },
+  {
+    "id": 11,
+    "p": 2,
+    "t": "Contabile / Data Analyst",
+    "n": "Giulio Giannelli",
+    "c": "amber",
+    "x": 218.00457691050465,
+    "y": 465.4157131436449
+  },
+  {
+    "id": 12,
+    "p": 3,
+    "t": "Addetto HR Technico",
+    "n": "Studio Zugaro - Studio Prisciandaro",
+    "c": "rose",
+    "x": -176.29880131017603,
+    "y": 328.8012469224256
+  },
+  {
+    "id": 13,
+    "p": 3,
+    "t": "Addetto HR employee welness",
+    "n": "CHO esterno?",
+    "c": "rose",
+    "x": -11.949157179365528,
+    "y": 337.28170911309064
+  },
+  {
+    "id": 14,
+    "p": 4,
+    "t": "Content, Siti e Piattaforme",
+    "n": "Consuelo",
+    "c": "blue",
+    "x": 544.5518796204349,
+    "y": 399.32588113066333
+  },
+  {
+    "id": 15,
+    "p": 4,
+    "t": "Grafico / Content / Social / Visual",
+    "n": "Valeria",
+    "c": "blue",
+    "x": 378.81997652817836,
+    "y": 391.5703596284667
+  },
+  {
+    "id": 17,
+    "p": 5,
+    "t": "Sales Manager/ Gruppi",
+    "n": "Arianna?",
+    "c": "green",
+    "x": 660.0423690171955,
+    "y": 334.3733885497669
+  },
+  {
+    "id": 22,
+    "p": 7,
+    "t": "Call Center Senior",
+    "n": "Chiara Moretti",
+    "c": "red",
+    "x": 882.6653423711455,
+    "y": 611.7425623288257
+  },
+  {
+    "id": 23,
+    "p": 7,
+    "t": "Operatore 1",
+    "n": "Mirk berardi",
+    "c": "red",
+    "x": 748.4866483967048,
+    "y": 700.1381486036355
+  },
+  {
+    "id": 24,
+    "p": 7,
+    "t": "Call Center Senior",
+    "n": "Giada Tafani",
+    "c": "red",
+    "x": 1059.863419456077,
+    "y": 610.9685196438434
+  },
+  {
+    "id": 25,
+    "p": 7,
+    "t": "Operatore 3",
+    "n": "Carolina Staron",
+    "c": "red",
+    "x": 916.8112122528315,
+    "y": 690.3301200921524
+  },
+  {
+    "id": 26,
+    "p": 8,
+    "t": "IT Manager / PMS",
+    "n": "Giorgini e Masha",
+    "c": "gray",
+    "x": 1158.1506533030856,
+    "y": 472.87530857878227
+  },
+  {
+    "id": 27,
+    "p": 8,
+    "t": "Assistenza Tecnica",
+    "n": "Fans Computer/ Toscana TLC/ Carlo Lauci (Video sorveglianza)",
+    "c": "gray",
+    "x": 1292.9548638325302,
+    "y": 613.400387396029
+  },
+  {
+    "id": 100,
+    "p": 2,
+    "t": "Delegata alla gestione Admin/Finance",
+    "n": "Anna Digiuseppe",
+    "c": "amber",
+    "x": 262.0309347641321,
+    "y": 61.46178105473909
+  },
+  {
+    "id": 101,
+    "p": 2,
+    "t": "Contabile/ CAPEX",
+    "n": "Marlena Gergis",
+    "c": "amber",
+    "x": -124.62351750241635,
+    "y": 469.0475642219023
+  },
+  {
+    "id": 102,
+    "p": 5,
+    "t": "Pricing and Analytics",
+    "n": "Masha Isutina",
+    "c": "green",
+    "x": 822.6629481009227,
+    "y": 338.0395511394662
+  },
+  {
+    "id": 103,
+    "p": 7,
+    "t": "Operatore 2",
+    "n": "Anna Nuzzuolo",
+    "c": "red",
+    "x": 1092.8602656748874,
+    "y": 686.9670824191368
+  },
+  {
+    "id": 104,
+    "p": 5,
+    "t": "Consulente Sales Esterno?",
+    "n": "Sberenini?",
+    "c": "green",
+    "x": 739.3215596724995,
+    "y": 433.9961968911573
+  },
+  {
+    "id": 105,
+    "p": 1,
+    "t": "Controllo Qualità",
+    "n": "Arianna D'auria?",
+    "c": "purp",
+    "x": 1313.8816051230144,
+    "y": 339.1411089381549
+  },
+  {
+    "id": 106,
+    "p": 105,
+    "t": "Governanti struttura",
+    "n": "",
+    "c": "purp",
+    "x": 1333.9556267112564,
+    "y": 440.07226542272974
+  },
+  {
+    "id": 107,
+    "p": 4,
+    "t": "Content Creation foto e video",
+    "n": "Angela",
+    "c": "blue",
+    "x": 567.3120151655992,
+    "y": 486.3439924172004
+  }
+];
+/*GITAV_DATA_END*/
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let nodes = [];
+let nid   = 108;
+let sc    = 0.72, px = 60, py = 40;
+let dragNode = null, dragCvs = false;
+let ds = {};
+let editId = null, delId = null;
+let editColor = 'teal';
+let history = [];  // undo stack
+const MAX_HISTORY = 30;
+
+// ── PERSISTENCE ───────────────────────────────────────────────────────────────
+function pushHistory() {
+  history.push(JSON.stringify({nodes, nid}));
+  if (history.length > MAX_HISTORY) history.shift();
+  document.getElementById('btn-undo').disabled = false;
+}
+
+function undo() {
+  if (!history.length) return;
+  const prev = JSON.parse(history.pop());
+  nodes = prev.nodes; nid = prev.nid;
+  if (!history.length) document.getElementById('btn-undo').disabled = true;
+  render(); save();
+}
+function save() {
+  try {
+    localStorage.setItem('gitav-org-v3', JSON.stringify({nodes, nid, sc, px, py}));
+    const lbl = document.getElementById('saved-lbl');
+    lbl.textContent = '✓ Salvato';
+    lbl.style.opacity = 1;
+    setTimeout(() => { lbl.style.opacity = 0; }, 2000);
+  } catch(e) {}
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('gitav-org-v3');
+    if (raw) {
+      const d = JSON.parse(raw);
+      nodes = d.nodes || []; nid = d.nid || 100;
+      sc = d.sc || 0.72; px = d.px || 60; py = d.py || 40;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render() {
+  const world = document.getElementById('world');
+  const svg   = document.getElementById('svg-l');
+  [...world.children].forEach(el => { if(el !== svg) el.remove(); });
+  svg.innerHTML = '';
+
+  nodes.forEach(n => {
+    const col = COLS[n.c] || COLS.dark;
+
+    // Node div
+    const d = document.createElement('div');
+    d.className = 'node';
+    d.id = 'n' + n.id;
+    d.style.left = n.x + 'px';
+    d.style.top  = n.y + 'px';
+    d.dataset.id = n.id;
+
+    d.innerHTML = `
+      <div class="nacts">
+        <button class="na na-edit"  onclick="openEdit(event,${n.id})"  title="Modifica">✎</button>
+        <button class="na na-add"   onclick="addChild(event,${n.id})"  title="Aggiungi figlio">+</button>
+        <button class="na na-link"  onclick="startConnect(event,${n.id})" title="Connetti a...">🔗</button>
+        <button class="na na-del"   onclick="openDel(event,${n.id})"   title="Elimina">×</button>
+      </div>
+      <div class="ni" ondblclick="openEdit(event,${n.id})">
+        <div class="nbar" style="background:${col.bar}"></div>
+        <div class="nbody" style="background:${col.bg}">
+          <div class="ntitle">${esc(n.t)}</div>
+          <div class="nname">${n.n ? esc(n.n) : '<span style="color:#ccc">—</span>'}</div>
+        </div>
+      </div>`;
+
+    d.addEventListener('mousedown', e => {
+      if (connectMode) {
+        e.preventDefault(); e.stopPropagation();
+        handleConnectClick(n.id);
+        return;
+      }
+      // Only drag from the card (.ni), not from the buttons padding area
+      if (e.target.closest('button') || e.target.closest('.nacts')) return;
+      if (!e.target.closest('.ni')) return;
+      startDragNode(e, n.id);
+    });
+    world.appendChild(d);
+
+    // SVG line to parent
+    if (n.p !== null) {
+      const par = nodes.find(x => x.id === n.p);
+      if (par) {
+        const NW = 152, NH = 86;
+        const x1 = par.x + NW/2, y1 = par.y + NH;
+        const x2 = n.x   + NW/2, y2 = n.y;
+        const mid = (y1 + y2) / 2;
+        const path = `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`;
+        const el = document.createElementNS('http://www.w3.org/2000/svg','path');
+        el.setAttribute('d', path);
+        el.setAttribute('stroke', col.bar);
+        el.setAttribute('stroke-width','1.6');
+        el.setAttribute('fill','none');
+        el.setAttribute('opacity','0.55');
+        svg.appendChild(el);
+      }
+    }
+  });
+
+  applyT();
+}
+
+function applyT() {
+  document.getElementById('world').style.transform = `translate(${px}px,${py}px) scale(${sc})`;
+  document.getElementById('zoom-lbl').textContent = Math.round(sc*100) + '%';
+}
+
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── DRAGGING ──────────────────────────────────────────────────────────────────
+function startDragNode(e, id) {
+  if (e.target.closest('button') || e.target.closest('.nacts')) return;
+  e.preventDefault(); e.stopPropagation();
+  const n = nodes.find(x => x.id === id);
+  dragNode = id;
+  ds = { mx: e.clientX, my: e.clientY, nx: n.x, ny: n.y };
+  document.getElementById('n'+id).classList.add('dragging');
+}
+
+document.getElementById('cvs').addEventListener('mousedown', e => {
+  const t = e.target;
+  if (t.id === 'cvs' || t.id === 'world' || t.id === 'svg-l') {
+    dragCvs = true;
+    ds = { mx: e.clientX, my: e.clientY, px, py };
+    document.getElementById('cvs').classList.add('grabbing');
+  }
+});
+
+document.addEventListener('mousemove', e => {
+  if (dragNode !== null) {
+    const dx = (e.clientX - ds.mx) / sc;
+    const dy = (e.clientY - ds.my) / sc;
+    const n = nodes.find(x => x.id === dragNode);
+    n.x = ds.nx + dx; n.y = ds.ny + dy;
+    const el = document.getElementById('n'+dragNode);
+    if (el) { el.style.left = n.x+'px'; el.style.top = n.y+'px'; }
+    document.getElementById('svg-l').innerHTML = '';
+    drawLines();
+  }
+  if (dragCvs) {
+    px = ds.px + (e.clientX - ds.mx);
+    py = ds.py + (e.clientY - ds.my);
+    applyT();
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (dragNode !== null) {
+    document.getElementById('n'+dragNode)?.classList.remove('dragging');
+    // Only push history if the node actually moved significantly
+    const n = nodes.find(x => x.id === dragNode);
+    if (n && (Math.abs(n.x - ds.nx) > 4 || Math.abs(n.y - ds.ny) > 4)) {
+      // Position already updated — history was not pushed during drag to avoid spam
+      // We save the pre-move position by checking ds
+      const pre = JSON.stringify({nodes: nodes.map(x => x.id === dragNode ? {...x, x: ds.nx, y: ds.ny} : x), nid});
+      history.push(pre);
+      if (history.length > MAX_HISTORY) history.shift();
+      document.getElementById('btn-undo').disabled = false;
+    }
+    dragNode = null;
+    save();
+  }
+  dragCvs = false;
+  document.getElementById('cvs').classList.remove('grabbing');
+});
+
+function drawLines() {
+  const svg = document.getElementById('svg-l');
+  const NW = 152, NH = 86;
+  nodes.forEach(n => {
+    if (n.p === null) return;
+    const par = nodes.find(x => x.id === n.p);
+    if (!par) return;
+    const col = COLS[n.c] || COLS.dark;
+    const x1 = par.x+NW/2, y1 = par.y+NH, x2 = n.x+NW/2, y2 = n.y;
+    const mid = (y1+y2)/2;
+    const path = `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`;
+    const el = document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('d',path); el.setAttribute('stroke',col.bar);
+    el.setAttribute('stroke-width','1.6'); el.setAttribute('fill','none');
+    el.setAttribute('opacity','0.55');
+    svg.appendChild(el);
+  });
+}
+
+// ── ZOOM ──────────────────────────────────────────────────────────────────────
+document.getElementById('cvs').addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = e.deltaY < 0 ? 1.08 : 0.93;
+  const rect = document.getElementById('cvs').getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  px = mx - (mx - px)*f; py = my - (my - py)*f;
+  sc = Math.min(2.5, Math.max(0.15, sc*f));
+  applyT();
+}, {passive:false});
+
+function fitAll() {
+  if (!nodes.length) return;
+  const xs = nodes.map(n=>n.x), ys = nodes.map(n=>n.y);
+  const minX=Math.min(...xs), minY=Math.min(...ys);
+  const maxX=Math.max(...xs)+152, maxY=Math.max(...ys)+86;
+  const cw=window.innerWidth, ch=window.innerHeight-46;
+  sc = Math.min((cw-60)/(maxX-minX),(ch-60)/(maxY-minY),1.4);
+  px = (cw-(maxX-minX)*sc)/2 - minX*sc;
+  py = 30 - minY*sc;
+  applyT();
+}
+function resetZoom() { sc=1; px=60; py=40; applyT(); }
+
+// ── EDIT MODAL ────────────────────────────────────────────────────────────────
+function buildSwatches(selected) {
+  const cont = document.getElementById('ei-swatches');
+  cont.innerHTML = '';
+  Object.entries(COLS).forEach(([key,col]) => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (key===selected?' active':'');
+    s.style.background = col.bar;
+    s.title = col.label;
+    s.onclick = () => {
+      editColor = key;
+      cont.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+    };
+    cont.appendChild(s);
+  });
+}
+
+function openEdit(e, id) {
+  if (connectMode) { e.stopPropagation(); handleConnectClick(id); return; }
+  e.stopPropagation();
+  editId = id;
+  const n = nodes.find(x => x.id === id);
+  document.getElementById('ei-title').value = n.t;
+  document.getElementById('ei-name').value  = n.n;
+  editColor = n.c;
+  buildSwatches(n.c);
+  // Show disconnect only if node has a parent
+  document.getElementById('btn-disc').style.display = n.p !== null ? 'block' : 'none';
+  showModal('ov-edit');
+  setTimeout(()=>document.getElementById('ei-title').focus(),80);
+}
+
+function saveEdit() {
+  pushHistory();
+  const n = nodes.find(x => x.id === editId);
+  if (n) {
+    n.t = document.getElementById('ei-title').value.trim() || n.t;
+    n.n = document.getElementById('ei-name').value.trim();
+    n.c = editColor;
+  }
+  closeModal('ov-edit');
+  render(); save();
+}
+
+// ── CONNECT MODE ──────────────────────────────────────────────────────────────
+let connectMode  = false;
+let connectSource = null;
+
+function toggleConnectMode() {
+  if (connectMode) exitConnectMode();
+  else enterConnectMode();
+}
+
+function enterConnectMode() {
+  connectMode = true; connectSource = null;
+  document.getElementById('btn-connect').classList.add('active');
+  document.getElementById('connect-banner').classList.add('active');
+  document.getElementById('connect-step').textContent = 'Clicca il nodo di PARTENZA';
+  document.getElementById('cvs').classList.add('connect-mode');
+}
+
+function exitConnectMode() {
+  connectMode = false; connectSource = null;
+  document.getElementById('btn-connect').classList.remove('active');
+  document.getElementById('connect-banner').classList.remove('active');
+  document.getElementById('cvs').classList.remove('connect-mode');
+  // Remove any highlight classes
+  document.querySelectorAll('.connect-source,.connect-target-hover')
+    .forEach(el => el.classList.remove('connect-source','connect-target-hover'));
+}
+
+function startConnect(e, id) {
+  e.stopPropagation();
+  if (!connectMode) enterConnectMode();
+  connectSource = id;
+  document.querySelectorAll('.connect-source')
+    .forEach(el => el.classList.remove('connect-source'));
+  document.getElementById('n'+id)?.classList.add('connect-source');
+  document.getElementById('connect-step').textContent =
+    'Ora clicca il nodo di DESTINAZIONE (figlio)';
+}
+
+function handleConnectClick(id) {
+  if (!connectMode) return false;
+  if (connectSource === null) {
+    // First click = source
+    connectSource = id;
+    document.querySelectorAll('.connect-source')
+      .forEach(el => el.classList.remove('connect-source'));
+    document.getElementById('n'+id)?.classList.add('connect-source');
+    document.getElementById('connect-step').textContent =
+      'Ora clicca il nodo di DESTINAZIONE (figlio)';
+    return true;
+  } else {
+    // Second click = destination
+    const src = connectSource;
+    const dst = id;
+    if (src === dst) { exitConnectMode(); return true; }
+    // Avoid circular reference
+    function isDescendant(child, ancestor) {
+      let cur = child;
+      let visited = new Set();
+      while (cur !== null) {
+        if (visited.has(cur)) break;
+        visited.add(cur);
+        const n = nodes.find(x => x.id === cur);
+        if (!n) break;
+        if (n.p === ancestor) return true;
+        cur = n.p;
+      }
+      return false;
+    }
+    if (isDescendant(src, dst)) {
+      document.getElementById('connect-step').textContent =
+        '⚠ Connessione circolare non permessa — scegli un altro nodo';
+      return true;
+    }
+    // Set parent
+    const dstNode = nodes.find(x => x.id === dst);
+    if (dstNode) { pushHistory(); dstNode.p = src; }
+    exitConnectMode();
+    render(); save();
+    return true;
+  }
+}
+
+// ── DISCONNECT ────────────────────────────────────────────────────────────────
+function disconnectNode() {
+  pushHistory();
+  const n = nodes.find(x => x.id === editId);
+  if (n && n.p !== null) { n.p = null; }
+  closeModal('ov-edit');
+  render(); save();
+}
+function openDel(e, id) {
+  e.stopPropagation();
+  delId = id;
+  showModal('ov-del');
+}
+
+function confirmDelete() {
+  if (delId === null) return;
+  pushHistory();
+  const toKill = new Set();
+  function collect(id) {
+    toKill.add(id);
+    nodes.filter(n => n.p === id).forEach(c => collect(c.id));
+  }
+  collect(delId);
+  nodes = nodes.filter(n => !toKill.has(n.id));
+  delId = null;
+  closeModal('ov-del');
+  render(); save();
+}
+
+// ── ADD NODES ─────────────────────────────────────────────────────────────────
+function addChild(e, pid) {
+  e.stopPropagation();
+  pushHistory();
+  const par = nodes.find(x => x.id === pid);
+  const kids = nodes.filter(x => x.p === pid);
+  const ox = par ? par.x + kids.length*160 : 300;
+  const oy = par ? par.y + 180 : 200;
+  const col = par ? par.c : 'dark';
+  nodes.push({id:nid++, p:pid, t:'Nuova posizione', n:'', c:col, x:ox, y:oy});
+  render(); save();
+}
+
+function addRoot() {
+  pushHistory();
+  nodes.push({id:nid++, p:null, t:'Nuovo nodo', n:'', c:'dark',
+    x: 200 + Math.random()*600, y: 100 + Math.random()*200});
+  render(); save();
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function confirmResetAll() { showModal('ov-reset'); }
+function doReset() {
+  nodes = DEFAULT.map(d => ({...d}));
+  nid = 100; sc = 0.72; px = 60; py = 40;
+  closeModal('ov-reset');
+  render(); save();
+  setTimeout(fitAll, 80);
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────────────────
+function showModal(id)  { document.getElementById(id).style.display='flex'; }
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+    e.preventDefault(); undo(); return;
+  }
+  if (e.key === 'Escape') {
+    exitConnectMode();
+    closeModal('ov-edit'); closeModal('ov-del'); closeModal('ov-reset');
+  }
+  if (e.key === 'Enter') {
+    if (document.getElementById('ov-edit').style.display!=='none' &&
+        document.activeElement.closest('.modal')) saveEdit();
+  }
+});
+
+// ── SAVE AS FILE ─────────────────────────────────────────────────────────────
+function saveAsFile() {
+  const html = document.documentElement.outerHTML;
+
+  // Serialize current nodes
+  const nodesJson = JSON.stringify(nodes, null, 2);
+  const newBlock = `/*GITAV_DATA_START*/\nconst DEFAULT = ${nodesJson};\n/*GITAV_DATA_END*/`;
+
+  // Replace the marked data section
+  let updated = html.replace(
+    /\/\*GITAV_DATA_START\*\/[\s\S]*?\/\*GITAV_DATA_END\*\//,
+    newBlock
+  );
+
+  // Also update the nid counter so new nodes don't clash with saved ones
+  updated = updated.replace(/let nid\s*=\s*\d+/, `let nid   = ${nid}`);
+
+  // Download the file
+  const blob = new Blob([updated], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `gitav_orgchart_${new Date().toISOString().slice(0,10)}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+
+  const lbl = document.getElementById('saved-lbl');
+  lbl.textContent = '💾 File scaricato — apri il nuovo file per continuare';
+  lbl.style.opacity = 1;
+  setTimeout(() => { lbl.style.opacity = 0; }, 4000);
+}
+
+// ── LEGEND ────────────────────────────────────────────────────────────────────
+function buildLegend() {
+  const el = document.getElementById('leg-body');
+  Object.entries(COLS).slice(0,8).forEach(([k,v]) => {
+    el.innerHTML += `<div class="leg-i">
+      <div class="leg-dot" style="background:${v.bar}"></div>
+      <span class="leg-l">${v.label}</span>
+    </div>`;
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+buildLegend();
+if (!load()) { nodes = DEFAULT.map(d => ({...d})); }
+render();
+setTimeout(fitAll, 100);
+</script>
+
+
+</body></html>
